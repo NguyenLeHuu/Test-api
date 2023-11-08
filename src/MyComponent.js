@@ -18,6 +18,8 @@ const ReceivedMessage = styled.li`
   padding: 10px;
   border-radius: 10px;
 `;
+const socket = io("http://localhost:3000"); // Thay 'http://your-socket-server-url' bằng URL của máy chủ Socket.IO của bạn
+
 function MyComponent() {
   const [messages, setMessages] = useState([]);
   const [data_api, setdata_api] = useState([]);
@@ -26,7 +28,6 @@ function MyComponent() {
   const [user2, setUser2] = useState("");
   const [renderTrigger, setRenderTrigger] = useState(false);
   // Kết nối đến máy chủ Socket.IO
-  const socket = io("http://localhost:3000"); // Thay 'http://your-socket-server-url' bằng URL của máy chủ Socket.IO của bạn
 
   useEffect(() => {
     if (idLogin !== "") {
