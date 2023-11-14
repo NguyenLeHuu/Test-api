@@ -18,7 +18,8 @@ const ReceivedMessage = styled.li`
   padding: 10px;
   border-radius: 10px;
 `;
-const socket = io("http://localhost:3000"); // Thay 'http://your-socket-server-url' bằng URL của máy chủ Socket.IO của bạn
+const socket = io("https://clinicsystem.io.vn/"); // Thay 'http://your-socket-server-url' bằng URL của máy chủ Socket.IO của bạn
+// const socket = io("http://localhost:3000");
 
 function MyComponent() {
   const [messages, setMessages] = useState([]);
@@ -37,30 +38,43 @@ function MyComponent() {
       } else if (idLogin === "clinic") {
         setUser1("clinic");
         setUser2("customer1");
+      } else {
+        setUser1("customer2");
+        setUser2("clinic");
       }
     } else {
-      console.log("đăng nhập đi");
+      console.log("đăng nhập đ");
     }
   }, [idLogin]);
+
   useEffect(() => {
     fetchData();
+    socket.on("server-send-data_seft", (message) => {
+      // setMessages((prevMessages) => [...prevMessages, message]);
+      console.log("message gửi", message);
+      fetchData();
+    });
+
+    socket.on("server-send-data", (message) => {
+      // setMessages((prevMessages) => [...prevMessages, message]);
+      console.log("message nhận", message.msg);
+      fetchData();
+    });
   }, []);
+
   useEffect(() => {
     //viết giùm tôi để khi data_api cập nhật thì màn hình cũng render lại
     // Tạo một state tạm thời để gây ra việc render lại khi data_api thay đổi
 
     // Gán giá trị renderTrigger bằng giá trị ngẫu nhiên để kích hoạt render
     setRenderTrigger(!renderTrigger);
+    console.log("Render lại màn hình vì data_api đã thay đổi");
   }, [data_api]);
-
-  socket.on("server-send-data", (message) => {
-    // setMessages((prevMessages) => [...prevMessages, message]);
-    fetchData();
-  });
 
   const fetchData = () => {
     fetch(
-      `http://localhost:3000/content_chat/?chat_id=75e72f990d5b6fe886b2d0430c1f7a&user1=${user1}&user2=${user2}`
+      `https://clinicsystem.io.vn/content_chat/?chat_id=75e72f990d5b6fe886b2d0430c1f7a&user1=${user1}&user2=${user2}`
+      // `http://localhost:3000/content_chat/?chat_id=75e72f990d5b6fe886b2d0430c1f7a&user1=${user1}&user2=${user2}`
     )
       .then((response) => {
         if (response.ok) {
@@ -100,7 +114,8 @@ function MyComponent() {
     };
 
     // Thực hiện yêu cầu Fetch
-    fetch("http://localhost:3000/content_chat/", requestInfo)
+    fetch("https://clinicsystem.io.vn/content_chat/", requestInfo)
+      // fetch("http://localhost:3000/content_chat/", requestInfo)
       .then((response) => {
         if (response.ok) {
           return response.json();
@@ -110,41 +125,45 @@ function MyComponent() {
       })
       .then((data) => {
         console.log("Yêu cầu thành công:", data);
+        const requestInfo1 = {
+          method: "POST",
+          headers: {
+            Accept: "*/*",
+            "Content-Type": "application/json; charset=utf-8",
+          },
+          body: JSON.stringify({
+            user1: user2,
+            user2: user1,
+            message: message,
+            type: "receive",
+            chat_id: "75e72f990d5b6fe886b2d0430c1f7a",
+          }),
+        };
+        fetch("https://clinicsystem.io.vn/content_chat/", requestInfo1)
+          // fetch("http://localhost:3000/content_chat/", requestInfo1)
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            } else {
+              throw new Error("Có lỗi xảy ra khi gửi yêu cầu.");
+            }
+          })
+          .then((data) => {
+            // console.log("Yêu cầu thành công:", data);
+            const da = {
+              user1,
+              user2,
+              msg: message,
+            };
+            socket.emit("client-sent-message", da);
+          })
+          .catch((error) => {
+            console.error("Lỗi:", error);
+          });
       })
       .catch((error) => {
         console.error("Lỗi:", error);
       });
-
-    const requestInfo1 = {
-      method: "POST",
-      headers: {
-        Accept: "*/*",
-        "Content-Type": "application/json; charset=utf-8",
-      },
-      body: JSON.stringify({
-        user1: user2,
-        user2: user1,
-        message: message,
-        type: "receive",
-        chat_id: "75e72f990d5b6fe886b2d0430c1f7a",
-      }),
-    };
-    fetch("http://localhost:3000/content_chat/", requestInfo1)
-      .then((response) => {
-        if (response.ok) {
-          return response.json();
-        } else {
-          throw new Error("Có lỗi xảy ra khi gửi yêu cầu.");
-        }
-      })
-      .then((data) => {
-        console.log("Yêu cầu thành công:", data);
-      })
-      .catch((error) => {
-        console.error("Lỗi:", error);
-      });
-
-    socket.emit("client-sent-message", message);
   };
 
   return (
@@ -158,6 +177,9 @@ function MyComponent() {
       ></textarea>
       <button
         onClick={() => {
+          const data = {};
+          data.account_id = idLogin;
+          socket.emit("login", data);
           alert(idLogin + " đã đăng nhập");
           fetchData();
         }}
